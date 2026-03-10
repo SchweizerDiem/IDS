@@ -8,6 +8,16 @@ from scapy.utils import wrpcap
 
 
 
+BANNER = r"""
+ __  __ ___ _   _ ___ 
+|  \/  |_ _| \ | |_ _|  
+| |\/| || ||  \| || | 
+| |  | || || |\  || |
+|_|  |_|___|_| \_|___| 
+              MINI-WIRE
+
+              """
+
 def menu():
     clear_screen()
     print(BANNER)
@@ -17,15 +27,6 @@ def menu():
     choice = input("Escolha uma opção: ").strip()
     return choice
 
-BANNER = r"""
- __  __ ___ _   _ ___ 
-|  \/  |_ _| \ | |_ _|  
-| |\/| || ||  \| || 
-| |  | || || |\  || |
-|_|  |_|___|_| \_|___| 
-              MINI-WIRE
-
-              """
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -104,7 +105,7 @@ def capture_loop(iface):
     packets = []
 
     def on_packet(pkt):
-        print(packet_handler(pkt),flash=True)
+        print(packet_handler(pkt),flush=True)
     try:
         sniff(iface=iface, prn=on_packet, store=False)
     except PermissionError:
@@ -123,8 +124,11 @@ def capture_loop(iface):
 
 
 def main():
-    BANNER
+    print(BANNER)
     while True:
+
+        iface = None
+
         choice = menu()
 
         if choice == "1":
