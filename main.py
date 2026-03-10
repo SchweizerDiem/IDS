@@ -1,8 +1,7 @@
 import os
-import sys
 import time
 from datetime import datetime
-from scapy.all import sniff, hexdump, conf
+from scapy.all import sniff
 from scapy.interfaces import get_if_list
 from scapy.utils import wrpcap
 
@@ -37,6 +36,7 @@ def required_root_hint():
         print("    sudo ./miniwieshark.py\n")
 
 def list_interfaces():
+
     return sorted(get_if_list())
 
 def choose_interface(ifaces):
@@ -105,6 +105,7 @@ def capture_loop(iface):
     packets = []
 
     def on_packet(pkt):
+        packets.append(pkt)
         print(packet_handler(pkt),flush=True)
     try:
         sniff(iface=iface, prn=on_packet, store=False)
@@ -117,7 +118,6 @@ def capture_loop(iface):
     except KeyboardInterrupt:
         ans = input("\nDeseja salvar a captura? (s/n): ").strip().lower()
         if ans == 's':
-            from scapy.utils import wrpcap
             filename = f"capture_{int(time.time())}.pcap"
             wrpcap(filename, packets)
             print(f"Captura salva em: {filename}")
@@ -125,9 +125,11 @@ def capture_loop(iface):
 
 def main():
     print(BANNER)
+
+    iface = None
+
     while True:
 
-        iface = None
 
         choice = menu()
 
