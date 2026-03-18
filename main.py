@@ -5,10 +5,15 @@ import select
 import termios
 import tty
 import time
+import shutil
+import subprocess
 from datetime import datetime
 
 from scapy.all import sniff, get_if_list, wrpcap
 
+
+RCLONE_CONFIG = "/home/alezandrio/.config/rclone/rclone.conf"
+RCLONE_REMOTE = "gdrive:pcaps"
 
 BANNER = r"""
  __  __ ___ _   _ ___        ____  _   _    _    ____  _  __
@@ -21,6 +26,7 @@ BANNER = r"""
 """
 
 CAPTURE_TIME = 180  # 3 minutos
+RCLONE_REMOTE = "gdrive:pcaps"
 
 
 def clear_screen():
@@ -117,10 +123,6 @@ def packet_handler(packet):
 
 
 def key_listener(stop_event, setup_event):
-    """
-    Vê as teclas em background.
-    Se carregar 'p', entra em setup mode.
-    """
     if os.name != "posix":
         return
 
@@ -141,14 +143,65 @@ def key_listener(stop_event, setup_event):
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
+def check_rclone():
+    return shutil.which("rclone") is not None
+
+
+def upload_to_drive(filepath):
+    if not check_rclone():
+        print("\n[-] rclone não encontrado no sistema.")
+        print("    Instala e configura primeiro com: rclone config")
+        return False
+
+    print(f"\n[+] A enviar '{filepath}' para {RCLONE_REMOTE} ...")
+
+    try:
+        result = subprocess.run(
+            [
+                "rclone",
+                "--config", RCLONE_CONFIG,
+                "copy",
+                filepath,
+                RCLONE_REMOTE
+            ],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        if result.returncode == 0:
+            print("[+] Upload concluído com sucesso.")
+            return True
+
+        print("[-] Falha no upload para o Google Drive.")
+        if result.stderr:
+            print(result.stderr.strip())
+        if result.stdout:
+            print(result.stdout.strip())
+        return False
+
+    except Exception as e:
+        print(f"[-] Erro ao executar rclone: {e}")
+        return False
+
+
 def save_capture(packets, iface):
     if not packets:
         print("Nenhum pacote capturado.")
         return
 
-    filename = f"capture_grp_{iface}_{int(time.time())}.pcap"
+    safe_iface = iface.replace("/", "_").replace("\\", "_").replace(" ", "_")
+    filename = f"capture_grp_{safe_iface}_{int(time.time())}.pcap"
+
     wrpcap(filename, packets)
     print(f"Captura guardada em: {filename}")
+
+    try:
+        success = upload_to_drive(filename)
+        if not success:
+            print("[!] Upload falhou, mas o ficheiro ficou guardado localmente.")
+    except Exception as e:
+        print(f"[!] Erro no upload, mas o ficheiro ficou guardado localmente: {e}")
 
 
 def capture_loop(iface):
@@ -260,21 +313,10 @@ def main():
         print("Não foi possível escolher uma interface automaticamente.")
         return
 
-    while True:
-        result = capture_loop(iface)
+    capture_loop(iface)
 
-        if result == "menu":
-            iface, action = setup_menu(iface)
-            if action == "exit":
-                clear_screen()
-                print("Até já")
-                return
-        else:
-            iface, action = setup_menu(iface)
-            if action == "exit":
-                clear_screen()
-                print("Até já")
-                return
+    clear_screen()
+    print("Captura terminada. Programa encerrado.")
 
 
 if __name__ == "__main__":
