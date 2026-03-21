@@ -36,6 +36,9 @@ def clear_screen():
 def required_root_hint():
     if os.name == "posix" and os.geteuid() != 0:
         print("Dica: para capturar pacotes, corre com sudo:")
+
+        #NOTE: Outra alternativa pra correr o codigo eh usando a flag -E
+        #      (preserva o ambiente virtual venv)
         print("  sudo ./venv/bin/python main.py\n")
 
 
@@ -101,6 +104,7 @@ def packet_handler(packet):
     ts = datetime.now().strftime("%H:%M:%S")
     leng = len(packet) if hasattr(packet, "__len__") else "?"
     summary = packet.summary()
+    dport = packet.dport if hasattr(packet, "dport") else "-"
 
     src = dst = "-"
     if packet.haslayer("IP"):
@@ -119,7 +123,7 @@ def packet_handler(packet):
             proto = p
             break
 
-    return f"{ts} | {proto:4} | {src} -> {dst} | {leng:4} | {summary}"
+    return f"{ts} | {proto:4} | {src} -> {dst} | {leng:4} | {summary} | {dport}"
 
 
 def key_listener(stop_event, setup_event):
