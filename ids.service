@@ -1,0 +1,44 @@
+[Unit]
+Description=Raspberry Pi Intrusion Detection System
+Documentation=https://github.com/yourname/raspberry-ids
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# -----------------------------------------------------------------------
+# EDIT THESE PATHS to match your actual installation directory and venv.
+# -----------------------------------------------------------------------
+WorkingDirectory=/opt/raspberry-ids
+ExecStart=/opt/raspberry-ids/venv/bin/python /opt/raspberry-ids/ids.py
+
+# Restart automatically on crash (but not on clean exit / systemctl stop)
+Restart=on-failure
+RestartSec=10
+
+# -----------------------------------------------------------------------
+# Credentials — set your Gmail (or other SMTP) account details here.
+# Using environment variables keeps passwords out of the source code.
+# If you use a Gmail account, create an App Password:
+#   https://myaccount.google.com/apppasswords
+# -----------------------------------------------------------------------
+Environment="IDS_EMAIL_FROM=your_ids_account@gmail.com"
+Environment="IDS_EMAIL_TO=your_personal_email@example.com"
+# Store the password in a separate file that only root can read:
+#   echo 'IDS_EMAIL_PASSWORD=your_app_password' > /etc/raspberry-ids/secrets.env
+#   chmod 600 /etc/raspberry-ids/secrets.env
+EnvironmentFile=-/etc/raspberry-ids/secrets.env
+
+# Must run as root to capture raw packets
+User=root
+
+# Increase open-file limits for high-traffic environments
+LimitNOFILE=65536
+
+# Log to the system journal (read with: journalctl -u raspberry-ids -f)
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
